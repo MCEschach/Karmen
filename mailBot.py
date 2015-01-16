@@ -1,4 +1,4 @@
-#! /usr/local/bin/python
+#! /usr/local/bin/python3
 #coding=utf-8
 
 import sys
@@ -6,7 +6,7 @@ import imaplib
 import getpass
 import email
 import datetime
-import git
+#import git
 import os
 import re
 import json
@@ -16,12 +16,15 @@ import uuid
 
 LOCALDIR = os.path.dirname(os.path.realpath(__file__))
 
-#Folgende Dinge sollten in eine Konfigurationsdatei ausgelagert werden:
-SMTPserver = "ZENSORED"
-sender =     "ZENSORED"
+from configparser import SafeConfigParser
+parser = SafeConfigParser()
+parser.read(LOCALDIR+'/mailbot.config')
+
+SERVER = parser.get('mail_credentials', 'SERVER')
+sender = parser.get('mail_credentials', 'sender')
 #Login credentials:
-USERNAME = "ZENSORED"
-PASSWORD = "ZENSORED"
+USERNAME = parser.get('mail_credentials', 'USERNAME')
+PASSWORD = parser.get('mail_credentials', 'PASSWORD')
 
 #Wichtig für Filter:
 BOTADDRESS = USERNAME
@@ -58,7 +61,7 @@ def sendMail(to, subject, content, replyTo = "", attachImgPath = ""):
                 msg_image = MIMEImage(file.read(), name=os.path.basename(img['path']))
                 msg.attach(msg_image)
 
-        conn = SMTP(SMTPserver)
+        conn = SMTP(SERVER)
         conn.set_debuglevel(False)
         conn.login(USERNAME, PASSWORD)
         try:
@@ -66,7 +69,7 @@ def sendMail(to, subject, content, replyTo = "", attachImgPath = ""):
         finally:
             conn.close()
 
-    except Exception, exc:
+    except Exception as exc:
         #sys.exit( "mail failed; %s" % str(exc) ) # give a error message
         #Keine Ausgabe in die Konsole... TODO: Logfile
         return #Einfach die Mail nicht absenden bei Fehler
@@ -84,7 +87,7 @@ def process_mailbox(M):
             #print "ERROR getting message", num
             return [] #Keine Mails zurückgeben
 
-        msg = email.message_from_string(data[0][1])
+        msg = email.message_from_bytes(data[0][1])
         msg_content = msg.get_payload()
         #print 'Message %s: %s' % (num, msg['Subject'])
         M.store(num, '+FLAGS', '\\Deleted') #Löschen
@@ -96,25 +99,26 @@ def process_mailbox(M):
 def getNewMails():
     mails = []
     try:
-        M = imaplib.IMAP4_SSL(SMTPserver)
+        M = imaplib.IMAP4_SSL(SERVER)
         try:
             M.login(USERNAME, PASSWORD)
         except imaplib.IMAP4.error:
-            print "LOGIN FAILED!"
+            print ("LOGIN FAILED!")
             return mails
 
         #print "LOGIN SUCCEEDED!"
 
         rv, data = M.select("INBOX")
         if (rv == 'OK') & (int(data[0]) > 0):
-            print "Processing mailbox...\n"
+            #print "Processing mailbox...\n"
             mails = process_mailbox(M) # where the magic happens
             M.close()
-        else:
-            print "INBOX not found or empty"
+        #else:
+            #print "INBOX not found or empty"
         #M.logout()
-    except:
-        print "Mail failure"
+    except Exception as exc:
+        print('Failure: ' ,exc)
+        print ("Mail failure! Retry...")
     finally:
         M.logout()
     return mails
@@ -144,8 +148,11 @@ def replyToMail(mail, content, attachImgPath = ""):
 
 def generateTobiMeme(text):
     #Bild generieren: Anmerkung text sollte vor der Übergabe an Bash überprüft werden
-    p = subprocess.Popen([ LOCALDIR+'/memeGenerator.sh', text])
-    p.wait()
+    try:
+        p = subprocess.Popen([ LOCALDIR+'/memeGenerator.sh', text])
+        p.wait()
+    except:
+        return "" #Bei Fehler einfach kein Bild anhängen
     return MEMEGENPATH
 
 def processMail(mail):
@@ -161,11 +168,12 @@ def processMail(mail):
         #Die Antworten auf direkte Anfragen zuerst:
         if u"#TobiHeult" in subject:
             tobiHeult = generateTobiMeme(content)
+            #Im Fehlerfall einfach Email ohne Bild senden: (Chat bots machen das so!)
             replyToMail(mail, "*heul*\n*flenn*\n#MCEschach", tobiHeult)
     if u"#KarmenSagDochWas" in content:
         replyToMail(mail, "Blah, Blah, Blah")
 
-print "Mailbot start up...\nInfo: No Error Messages yet!"
+print ("Mailbot start up...\nInfo: No Error Messages yet!")
 
 while True: #Main loop
     time.sleep(3) #Immer kurz warten. System nicht überfordern

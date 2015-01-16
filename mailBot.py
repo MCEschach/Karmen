@@ -40,7 +40,7 @@ def sendMail(to, subject, content, replyTo = "", attachImgPath = ""):
 
     from smtplib import SMTP_SSL as SMTP       # this invokes the secure SMTP protocol (port 465, uses SSL)
     # from smtplib import SMTP                  # use this for standard SMTP protocol   (port 25, no encryption)
-    from email.MIMEText import MIMEText
+    from email.mime.text import MIMEText
     from email.mime.multipart import MIMEMultipart
     from email.mime.image     import MIMEImage
 
@@ -120,7 +120,8 @@ def getNewMails():
         print('Failure: ' ,exc)
         print ("Mail failure! Retry...")
     finally:
-        M.logout()
+        if M:
+            M.logout()
     return mails
 
 

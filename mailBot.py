@@ -30,7 +30,7 @@ PASSWORD = parser.get('mail_credentials', 'PASSWORD')
 BOTADDRESS = USERNAME
 
 #Ändern bei Änderungen am MemeGenerator:
-MEMEGENPATH = LOCALDIR + "/tobi.jpg"
+MEMEGENPATH = LOCALDIR + "/out.jpg" #Alle Generatoren schreiben die gleiche Datei, da keine parallel Ausführung.
 
 def sendMail(to, subject, content, replyTo = "", attachImgPath = ""):
     destination = [to]
@@ -156,6 +156,39 @@ def generateTobiMeme(text):
         return "" #Bei Fehler einfach kein Bild anhängen
     return MEMEGENPATH
 
+def generateMaggiMeme(text):
+    text = text.strip(" \n\r") #Alle unnötigen Umbrüche entfernen
+    #Im Anschluss den Text in 2 Teile teilen. Getrennt wird an der letzten leeren Zeile (\n\n)
+    lines = text.split("\n")
+    lines = lines[::-1] #Array umdrehen
+
+    string1 = ""
+    string2 = ""
+    secondLine = True
+
+    for string in lines:
+        if secondLine:
+            string2 = string+"\n"+string2
+        else:
+            string1 = string +"\n"+string1
+        if len(string.strip(" \n\r\t"))<1: #Auch Zeilen mit Leerzeichen zählen als leere Zeile
+            secondLine = False
+
+    #leere Zeilen am Anfang und Ende der Strings entfernen.
+    string1 = string1.strip(" \n\r")
+    string2 = string2.strip(" \n\r")
+    try:
+        p = subprocess.Popen([ LOCALDIR+'/maggiGenerator.sh', string1, string2])
+        p.wait()
+    except:
+        return "" #Bei Fehler einfach kein Bild anhängen
+    return MEMEGENPATH
+
+
+def sendPicReply(mail, content, pic):
+    #Im Fehlerfall einfach Email ohne Bild senden: (Chat bots machen das so!)
+    replyToMail(mail, content, pic)
+
 def processMail(mail):
     content = mail.get_payload()
     subject = mail['Subject']
@@ -164,15 +197,20 @@ def processMail(mail):
     toAddress = mail['To']
     if not toAddress:
         toAddress = ""
-    #Filter:
+    #Filter: (Es kann immer nur ein Filter zutreffen)
     if toAddress == BOTADDRESS:
         #Die Antworten auf direkte Anfragen zuerst:
         if u"#TobiHeult" in subject:
             tobiHeult = generateTobiMeme(content)
-            #Im Fehlerfall einfach Email ohne Bild senden: (Chat bots machen das so!)
-            replyToMail(mail, "*heul*\n*flenn*\n#MCEschach", tobiHeult)
+            sendPicReply(mail, "*heul*\n*flenn*\n#MCEschach", tobiHeult)
+            return
+        if u"#MaggiNavigiert" in subject:
+            maggi = generateMaggiMeme(content)
+            sendPicReply(mail, "Maggi kennt den Weg!\n#MCEschachRegelt", maggi)
+            return
     if u"#KarmenSagDochWas" in content:
         replyToMail(mail, "Blah, Blah, Blah")
+        return
 
 print ("Mailbot start up...\nInfo: No Error Messages yet!")
 

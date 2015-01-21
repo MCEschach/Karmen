@@ -201,8 +201,11 @@ def sendPicReply(mail, content, pic):
 
 def tweet(text):
     text = text.strip(" \r\n")#Unnötige Leerzeichen entfernen
-    twitter = Twython(TWITTER_APP_KEY, TWITTER_APP_SECRET, TWITTER_ACCESS_TOKEN, TWITTER_ACCESS_SECRET)
-    twitter.update_status(status=text)
+    try:
+        twitter = Twython(TWITTER_APP_KEY, TWITTER_APP_SECRET, TWITTER_ACCESS_TOKEN, TWITTER_ACCESS_SECRET)
+        twitter.update_status(status=text)
+    except:
+        return
 
 def processMail(mail):
     content = mail.get_payload()

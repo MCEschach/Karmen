@@ -13,6 +13,7 @@ import json
 import time
 import subprocess
 import uuid
+from twython import Twython
 
 LOCALDIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -25,6 +26,12 @@ sender = parser.get('mail_credentials', 'sender')
 #Login credentials:
 USERNAME = parser.get('mail_credentials', 'USERNAME')
 PASSWORD = parser.get('mail_credentials', 'PASSWORD')
+
+#Für Twitter:
+TWITTER_APP_KEY = parser.get('mail_credentials', 'TWITTER_APP_KEY')
+TWITTER_APP_SECRET = parser.get('mail_credentials', 'TWITTER_APP_SECRET')
+TWITTER_ACCESS_TOKEN = parser.get('mail_credentials', 'TWITTER_ACCESS_TOKEN')
+TWITTER_ACCESS_SECRET = parser.get('mail_credentials', 'TWITTER_ACCESS_SECRET')
 
 #Wichtig für Filter:
 BOTADDRESS = USERNAME
@@ -119,9 +126,9 @@ def getNewMails():
     except Exception as exc:
         print('Failure: ' ,exc)
         print ("Mail failure! Retry...")
-    finally:
-        if M:
-            M.logout()
+    #finally:
+    #    if M:
+    #        M.logout()
     return mails
 
 
@@ -177,17 +184,25 @@ def generateMaggiMeme(text):
     #leere Zeilen am Anfang und Ende der Strings entfernen.
     string1 = string1.strip(" \n\r")
     string2 = string2.strip(" \n\r")
+    if len(string1) < 1:
+        string1 = " "
+    if len(string2) < 1:
+        string2 = " "
     try:
         p = subprocess.Popen([ LOCALDIR+'/maggiGenerator.sh', string1, string2])
-        p.wait()
+        p.wait()#Das ist ein Problem und kann den Bot zum abstürzen bringen
     except:
         return "" #Bei Fehler einfach kein Bild anhängen
     return MEMEGENPATH
 
-
 def sendPicReply(mail, content, pic):
     #Im Fehlerfall einfach Email ohne Bild senden: (Chat bots machen das so!)
     replyToMail(mail, content, pic)
+
+def tweet(text):
+    text = text.strip(" \r\n")#Unnötige Leerzeichen entfernen
+    twitter = Twython(TWITTER_APP_KEY, TWITTER_APP_SECRET, TWITTER_ACCESS_TOKEN, TWITTER_ACCESS_SECRET)
+    twitter.update_status(status=text)
 
 def processMail(mail):
     content = mail.get_payload()
@@ -208,6 +223,8 @@ def processMail(mail):
             maggi = generateMaggiMeme(content)
             sendPicReply(mail, "Maggi kennt den Weg!\n#MCEschachRegelt", maggi)
             return
+        if u"#Twitter" in subject:
+            tweet(content)
     if u"#KarmenSagDochWas" in content:
         replyToMail(mail, "Blah, Blah, Blah")
         return

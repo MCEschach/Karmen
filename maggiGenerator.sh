@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/dash
 # Bild mit Schrift versehen:
 # convert TobiWeint.jpg -fill white -stroke black -strokewidth 4 -font Impact -pointsize 100 -draw "text 100,250 'PLEASE'" out.jpg
 

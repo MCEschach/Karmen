@@ -39,6 +39,9 @@ BOTADDRESS = USERNAME
 #Ändern bei Änderungen am MemeGenerator:
 MEMEGENPATH = LOCALDIR + "/out.jpg" #Alle Generatoren schreiben die gleiche Datei, da keine parallel Ausführung.
 
+MAGGIGENERATORSCRIPT = LOCALDIR + "/maggiGenerator.sh"
+JANGENERATORSCRIPT = LOCALDIR + "/janGenerator.sh"
+
 def sendMail(to, subject, content, replyTo = "", attachImgPath = ""):
     destination = [to]
 
@@ -163,7 +166,7 @@ def generateTobiMeme(text):
         return "" #Bei Fehler einfach kein Bild anhängen
     return MEMEGENPATH
 
-def generateMaggiMeme(text):
+def generate2LineMeme(text, generatorScript):
     text = text.strip(" \n\r") #Alle unnötigen Umbrüche entfernen
     #Im Anschluss den Text in 2 Teile teilen. Getrennt wird an der letzten leeren Zeile (\n\n)
     lines = text.split("\n")
@@ -189,7 +192,7 @@ def generateMaggiMeme(text):
     if len(string2) < 1:
         string2 = " "
     try:
-        p = subprocess.Popen([ LOCALDIR+'/maggiGenerator.sh', string1, string2])
+        p = subprocess.Popen([ generatorScript, string1, string2])
         p.wait()#Das ist ein Problem und kann den Bot zum abstürzen bringen
     except:
         return "" #Bei Fehler einfach kein Bild anhängen
@@ -222,8 +225,12 @@ def processMail(mail):
             tobiHeult = generateTobiMeme(content)
             sendPicReply(mail, "*heul*\n*flenn*\n#MCEschach", tobiHeult)
             return
+        if u"#Schweinemann" in subject:
+            jan = generate2LineMeme(content, JANGENERATORSCRIPT)
+            sendPicReply(mail, "#Schweinemann trinkt was er kann!", jan)
+            return
         if u"#MaggiNavigiert" in subject:
-            maggi = generateMaggiMeme(content)
+            maggi = generate2LineMeme(content, MAGGIGENERATORSCRIPT)
             sendPicReply(mail, "Maggi kennt den Weg!\n#MCEschachRegelt", maggi)
             return
         if u"#Twitter" in subject:

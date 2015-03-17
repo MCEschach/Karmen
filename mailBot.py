@@ -14,6 +14,7 @@ import time
 import subprocess
 import uuid
 from twython import Twython
+import fbconsole as F
 
 LOCALDIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -33,6 +34,11 @@ TWITTER_APP_SECRET = parser.get('mail_credentials', 'TWITTER_APP_SECRET')
 TWITTER_ACCESS_TOKEN = parser.get('mail_credentials', 'TWITTER_ACCESS_TOKEN')
 TWITTER_ACCESS_SECRET = parser.get('mail_credentials', 'TWITTER_ACCESS_SECRET')
 
+#Für Facebook:
+FACEBOOK_APP_ID = parser.get('mail_credentials','FACEBOOK_APP_ID')
+FACEBOOK_ACCESS_TOKEN = parser.get('mail_credentials','FACEBOOK_ACCESS_TOKEN')
+FACEBOOK_GROUP_ID = parser.get('mail_credentials','FACEBOOK_GROUP_ID')
+
 #Wichtig für Filter:
 BOTADDRESS = USERNAME
 
@@ -41,6 +47,11 @@ MEMEGENPATH = LOCALDIR + "/out.jpg" #Alle Generatoren schreiben die gleiche Date
 
 MAGGIGENERATORSCRIPT = LOCALDIR + "/maggiGenerator.sh"
 JANGENERATORSCRIPT = LOCALDIR + "/janGenerator.sh"
+
+#fbconsole konfigurieren:
+F.APP_ID = FACEBOOK_APP_ID
+F.ACCESS_TOKEN = FACEBOOK_ACCESS_TOKEN
+F.AUTH_SCOPE = ['publish_actions']
 
 def sendMail(to, subject, content, replyTo = "", attachImgPath = ""):
     destination = [to]
@@ -202,6 +213,15 @@ def sendPicReply(mail, content, pic):
     #Im Fehlerfall einfach Email ohne Bild senden: (Chat bots machen das so!)
     replyToMail(mail, content, pic)
 
+def facebookFeet(text):
+    text = text.strip(" \r\n")#Unnötige Leerzeichen entfernen
+    #status = F.post('/'+FACEBOOK_GROUP_ID+'/feed', {'message':text})
+    #print(status)
+    try:
+        status = F.post('/'+FACEBOOK_GROUP_ID+'/feed', {'message':text})
+    except:
+        return
+
 def tweet(text):
     text = text.strip(" \r\n")#Unnötige Leerzeichen entfernen
     try:
@@ -235,6 +255,8 @@ def processMail(mail):
             return
         if u"#Twitter" in subject:
             tweet(content)
+        if u"#Facebook" in subject:
+            facebookFeet(content)
     if u"#KarmenSagDochWas" in content:
         replyToMail(mail, "Blah, Blah, Blah")
         return
